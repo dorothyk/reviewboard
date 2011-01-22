@@ -19,9 +19,23 @@
   background-image: url('../images/review_request_box_bottom_bg.png');
 }
 
-#id_basedir {
-  width:500px;
+#new-request-table{
+  width:100%
 }
+
+#id_basedir {
+  width:100%;
+}
+
+#id_diff_path{
+  width:100%;
+}
+
+#id_parent_diff_path{
+  width:100%;
+}
+
+
 
 /****************************************************************************
  * Review Request Box
