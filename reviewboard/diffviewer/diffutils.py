@@ -4,12 +4,16 @@ import re
 import subprocess
 import tempfile
 from difflib import SequenceMatcher
+from pyaspell import AspellLinux
 
 try:
     import pygments
     from pygments.lexers import get_lexer_for_filename
     # from pygments.lexers import guess_lexer_for_filename
     from pygments.formatters import HtmlFormatter
+    from pygments.filter import Filter
+    from pygments.filters import FILTERS
+    from pygments.token import String, Comment, Error
 except ImportError:
     pass
 
@@ -156,6 +160,39 @@ class NoWrapperHtmlFormatter(HtmlFormatter):
             if tup[0]:
                 yield tup
 
+
+class SpellError(Filter):
+    """An Filter for Pygments that check spell errors."""
+    def __init__(self, **options):
+        Filter.__init__(self, **options)
+
+    def CheckLine(self,ttype,value):
+        """
+        Method called by the filter to check certain type of tokens.
+        Only words are checked. Change some word's type into Error for spell error.
+        """
+        SpellChecker = AspellLinux(("lang", "en"))
+        result=[]
+        string = re.split('(\W+)', value)
+        words = re.findall('[a-zA-Z]+', value)
+        for word in string:
+            if word in words and not SpellChecker.check(str(word)):
+                    wtype = Error
+            else:
+                wtype = ttype
+            result.append((wtype, word))
+        return result
+                       
+    def filter(self, lexer, stream):
+        """The filter only check spell for string and comment.""" 
+        for ttype, value in stream:
+            if ttype is String or ttype is Comment:
+                for ttype, word in self.CheckLine(ttype, value):
+                    yield ttype, word
+            else:
+                yield ttype, value
+
+FILTERS['spellerror'] = SpellError
 
 def Differ(a, b, ignore_space=False,
            compat_version=DEFAULT_DIFF_COMPAT_VERSION):
@@ -502,7 +539,7 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
 
         try:
             # This is only available in 0.7 and higher
-            lexer.add_filter('codetagify')
+            lexer.add_filter('spellerror')
         except AttributeError:
             pass
 
