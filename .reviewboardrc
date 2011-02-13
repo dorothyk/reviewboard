@@ -1,1 +1,1 @@
-REVIEWBOARD_URL = "http://localhost:8000"
+REVIEWBOARD_URL = "http://reviews.reviewboard.org"
