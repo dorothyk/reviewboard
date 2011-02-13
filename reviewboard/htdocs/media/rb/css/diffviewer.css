@@ -89,11 +89,6 @@ table.sidebyside .moved-to {
   border-radius: 8px 0px 0px 8px;
 }
 
-table.sidebyside .spellerr {
-    color: red;
-    text-decoration: underline;
-}
-
 table.sidebyside tr.first td,
 table.sidebyside tr.first th {
   border-top: 1px #D0D0D0 solid;
