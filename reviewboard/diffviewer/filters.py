@@ -15,7 +15,7 @@ class SpellError(Filter):
     """A Filter for Pygments that check spell errors."""
     def check_line(self, ttype, value):
         """Method called by the filter to check certain type of tokens.
-        
+
         Only words consisted of letters are checked.
         Change some word's type into Error if it is with spell error.
         """
