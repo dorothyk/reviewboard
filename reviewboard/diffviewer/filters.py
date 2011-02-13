@@ -19,7 +19,7 @@ class SpellError(Filter):
     def check_line(self, ttype, value):
         """
         Method called by the filter to check certain type of tokens.
-        Only words consisted of letters are checked. 
+        Only words consisted of letters are checked.
         Change some word's type into Error if it is with spell error.
         """
         spell_checker = AspellLinux(("lang", "en"))
@@ -36,9 +36,9 @@ class SpellError(Filter):
             result.append((wtype, word))
 
         return result
-                       
+
     def filter(self, lexer, stream):
-        """The filter only check spell for string and comment.""" 
+        """The filter only check spell for string and comment."""
         for ttype, value in stream:
             if ttype is token.String or ttype is token.Comment:
                 for ttype, word in self.check_line(ttype, value):
