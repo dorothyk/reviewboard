@@ -111,7 +111,7 @@ class AspellLinux(object):
 					len(word)
 				))
 		else:
-			raise TypeError("String expeced") 
+			raise TypeError("String expeced")
 
 	def personal_dict(self, word=None):
 		"""
