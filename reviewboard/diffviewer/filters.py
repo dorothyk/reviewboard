@@ -1,10 +1,11 @@
 import re
 
+from enchant.checker import SpellChecker
+from enchant.tokenize import EmailFilter, URLFilter
+
 from pygments import token
 from pygments.filter import Filter
 from pygments.filters import FILTERS
-
-from pyaspell import AspellLinux
 
 
 SpellingError = token.Token.SpellingError
@@ -16,16 +17,20 @@ class SpellError(Filter):
     def check_line(self, ttype, value):
         """Method called by the filter to check certain type of tokens.
 
-        Only words consisted of letters are checked.
         Change some word's type into Error if it is with spell error.
         """
-        spell_checker = AspellLinux(("lang", "en"))
+        spell_checker = SpellChecker("en_US",filters=[EmailFilter,URLFilter])
+        spell_checker.set_text(value)
+        spell_errors = []
+        
+        for err in spell_checker:
+            spell_errors.append(err.word)
+           
+        string = re.split('(\W+)', value)        
         result = []
-        string = re.split('(\W+)', value)
-        words = re.findall('[a-zA-Z]+', value)
 
         for word in string:
-            if word in words and not spell_checker.check(str(word)):
+            if word in spell_errors:
                 wtype = SpellingError
             else:
                 wtype = ttype
