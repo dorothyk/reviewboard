@@ -22,11 +22,11 @@ class SpellError(Filter):
         spell_checker = SpellChecker("en_US",filters=[EmailFilter,URLFilter])
         spell_checker.set_text(value)
         spell_errors = []
-        
+
         for err in spell_checker:
             spell_errors.append(err.word)
-           
-        string = re.split('(\W+)', value)        
+
+        string = re.split('(\W+)', value)
         result = []
 
         for word in string:
