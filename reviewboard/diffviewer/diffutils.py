@@ -501,9 +501,9 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
         #else:
         #    lexer = guess_lexer_for_filename(filename, data, stripnl=False)
 
+        lexer.add_filter('spellerror')
         try:
             # This is only available in 0.7 and higher
-            lexer.add_filter('spellerror')
             lexer.add_filter('codetagify')
         except AttributeError:
             pass
