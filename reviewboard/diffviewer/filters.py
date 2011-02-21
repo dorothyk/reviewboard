@@ -2,7 +2,6 @@ import re
 
 from enchant.checker import SpellChecker
 from enchant.tokenize import EmailFilter, URLFilter
-
 from pygments import token
 from pygments.filter import Filter
 from pygments.filters import FILTERS
@@ -11,6 +10,7 @@ from pygments.filters import FILTERS
 SpellingError = token.Token.SpellingError
 token.STANDARD_TYPES[SpellingError] = 'spellerr'
 
+spell_checker = SpellChecker("en_US", filters=[EmailFilter,URLFilter])
 
 class SpellError(Filter):
     """A Filter for Pygments that check spell errors."""
@@ -19,12 +19,8 @@ class SpellError(Filter):
 
         Change some word's type into Error if it is with spell error.
         """
-        spell_checker = SpellChecker("en_US",filters=[EmailFilter,URLFilter])
         spell_checker.set_text(value)
-        spell_errors = []
-
-        for err in spell_checker:
-            spell_errors.append(err.word)
+        spell_errors = [err.word for err in spell_checker]
 
         string = re.split('(\W+)', value)
         result = []
@@ -43,8 +39,8 @@ class SpellError(Filter):
         """The filter only check spell for string and comment."""
         for ttype, value in stream:
             if ttype is token.String or ttype is token.Comment:
-                for ttype, word in self.check_line(ttype, value):
-                    yield ttype, word
+                for val in self.check_line(ttype, value):
+                    yield val
             else:
                 yield ttype, value
 
