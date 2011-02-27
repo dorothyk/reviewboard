@@ -2,6 +2,7 @@ import re
 
 from enchant.checker import SpellChecker
 from enchant.tokenize import EmailFilter, URLFilter
+from djblets.siteconfig.models import SiteConfiguration
 from pygments import token
 from pygments.filter import Filter
 from pygments.filters import FILTERS
@@ -10,7 +11,10 @@ from pygments.filters import FILTERS
 SpellingError = token.Token.SpellingError
 token.STANDARD_TYPES[SpellingError] = 'spellerr'
 
-spell_checker = SpellChecker("en_US", filters=[EmailFilter,URLFilter])
+siteconfig = SiteConfiguration.objects.get_current()
+language = siteconfig.get('diffviewer_spell_checking_language')
+
+spell_checker = SpellChecker(language, filters=[EmailFilter,URLFilter])
 
 class SpellError(Filter):
     """A Filter for Pygments that check spell errors."""

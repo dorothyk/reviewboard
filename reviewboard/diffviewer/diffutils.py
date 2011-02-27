@@ -23,7 +23,8 @@ from djblets.siteconfig.models import SiteConfiguration
 from djblets.util.misc import cache_memoize
 
 from reviewboard.accounts.models import Profile
-from reviewboard.admin.checks import get_can_enable_syntax_highlighting
+from reviewboard.admin.checks import get_can_enable_spell_checking, \
+                                     get_can_enable_syntax_highlighting
 from reviewboard.diffviewer import filters
 from reviewboard.diffviewer.myersdiff import MyersDiffer
 from reviewboard.diffviewer.smdiff import SMDiffer
@@ -399,7 +400,7 @@ def register_interesting_lines_for_filename(differ, filename):
 
 
 def get_chunks(diffset, filediff, interfilediff, force_interdiff,
-               enable_syntax_highlighting):
+               enable_syntax_highlighting, enable_spell_checking):
     def diff_line(vlinenum, oldlinenum, newlinenum, oldline, newline,
                   oldmarkup, newmarkup):
         # This function accesses the variable meta, defined in an outer context.
@@ -492,7 +493,7 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
         else:
             last_header_index[0] = last_index
 
-    def apply_pygments(data, filename):
+    def apply_pygments(data, filename, enable_spell_checking):
         # XXX Guessing is preferable but really slow, especially on XML
         #     files.
         #if filename.endswith(".xml"):
@@ -501,7 +502,9 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
         #else:
         #    lexer = guess_lexer_for_filename(filename, data, stripnl=False)
 
-        lexer.add_filter('spellerror')
+        if enable_spell_checking:
+            lexer.add_filter('spellerror')
+
         try:
             # This is only available in 0.7 and higher
             lexer.add_filter('codetagify')
@@ -598,8 +601,8 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
         try:
             # TODO: Try to figure out the right lexer for these files
             #       once instead of twice.
-            markup_a = apply_pygments(old or '', source_file)
-            markup_b = apply_pygments(new or '', dest_file)
+            markup_a = apply_pygments(old or '', source_file, enable_spell_checking)
+            markup_b = apply_pygments(new or '', dest_file, enable_spell_checking)
         except ValueError:
             pass
 
@@ -916,6 +919,7 @@ def get_revision_str(revision):
 
 def get_diff_files(diffset, filediff=None, interdiffset=None,
                    enable_syntax_highlighting=True,
+                   enable_spell_checking=True,
                    load_chunks=True):
     if filediff:
         filediffs = [filediff]
@@ -1061,7 +1065,8 @@ def get_diff_files(diffset, filediff=None, interdiffset=None,
                     lambda: list(get_chunks(filediff.diffset,
                                             filediff, interfilediff,
                                             force_interdiff,
-                                            enable_syntax_highlighting)),
+                                            enable_syntax_highlighting,
+                                            enable_spell_checking)),
                     large_data=True)
 
             file['chunks'] = chunks
@@ -1159,7 +1164,8 @@ def get_file_chunks_in_range(context, filediff, interfilediff,
     else:
         assert 'user' in context
         files = get_diff_files(filediff.diffset, filediff, interdiffset,
-                               get_enable_highlighting(context['user']))
+                               get_enable_highlighting(context['user']),
+                               get_enable_checking(context['user']))
         context[key] = files
 
     if not files:
@@ -1227,3 +1233,16 @@ def get_enable_highlighting(user):
     return (siteconfig.get('diffviewer_syntax_highlighting') and
             user_syntax_highlighting and
             get_can_enable_syntax_highlighting())
+
+
+def get_enable_checking(user):
+    if user.is_authenticated():
+        profile, profile_is_new = Profile.objects.get_or_create(user=user)
+        user_spell_checking = profile.spell_checking
+    else:
+        user_spell_checking = True
+
+    siteconfig = SiteConfiguration.objects.get_current()
+    return (siteconfig.get('diffviewer_spell_checking') and
+            user_spell_checking and
+            get_can_enable_spell_checking())

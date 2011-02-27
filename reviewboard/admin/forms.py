@@ -38,8 +38,14 @@ from djblets.log import restart_logging
 from djblets.siteconfig.forms import SiteSettingsForm
 import pytz
 
+try:
+    from enchant import list_languages
+except ImportError:
+    pass
+
 from reviewboard.accounts.forms import LegacyAuthModuleSettingsForm
 from reviewboard.admin.checks import get_can_enable_search, \
+                                     get_can_enable_spell_checking, \
                                      get_can_enable_syntax_highlighting, \
                                      get_can_use_amazon_s3, \
                                      get_can_use_couchdb
@@ -338,6 +344,12 @@ class EMailSettingsForm(SiteSettingsForm):
 
 class DiffSettingsForm(SiteSettingsForm):
     """Diff settings for Review Board."""
+
+    try:
+        LANGUAGE_CHOICES = ( (lang, lang) for lang in list_languages())
+    except AttributeError:
+        pass
+
     diffviewer_syntax_highlighting = forms.BooleanField(
         label=_("Show syntax highlighting"),
         required=False)
@@ -347,6 +359,16 @@ class DiffSettingsForm(SiteSettingsForm):
         help_text=_("Files with lines greater than this number will not have "
                     "syntax highlighting.  Enter 0 for no limit."),
         required=False)
+
+    diffviewer_spell_checking = forms.BooleanField(
+        label=_("Show spell errors"),
+        required=False)
+
+    diffviewer_spell_checking_language = forms.CharField(
+        label=_("Spell checking language"),
+        help_text=_("Choose the language for spell checking."),
+        required=False,
+        widget=forms.Select(choices=LANGUAGE_CHOICES))
 
     diffviewer_show_trailing_whitespace = forms.BooleanField(
         label=_("Show trailing whitespace"),
@@ -384,12 +406,19 @@ class DiffSettingsForm(SiteSettingsForm):
         # TODO: Move this check into a dependencies module so we can catch it
         #       when the user starts up Review Board.
         can_syntax_highlight, reason = get_can_enable_syntax_highlighting()
+        can_spell_check, reason = get_can_enable_spell_checking()
 
         if not can_syntax_highlight:
             self.disabled_fields['diffviewer_syntax_highlighting'] = True
             self.disabled_reasons['diffviewer_syntax_highlighting'] = _(reason)
             self.disabled_fields['diffviewer_syntax_highlighting_threshold'] = True
             self.disabled_reasons['diffviewer_syntax_highlighting_threshold'] = _(reason)
+
+        if not can_spell_check:
+            self.disabled_fields['diffviewer_spell_checking'] = True
+            self.disabled_reasons['diffviewer_spell_checking'] = _(reason)
+            self.disabled_fields['diffviewer_spell_checking_language'] = True
+            self.disabled_reasons['diffviewer_spell_checking_language'] = _(reason)
 
         self.fields['include_space_patterns'].initial = \
             ', '.join(self.siteconfig.get('diffviewer_include_space_patterns'))
@@ -412,6 +441,8 @@ class DiffSettingsForm(SiteSettingsForm):
                 'classes': ('wide',),
                 'fields': ('diffviewer_syntax_highlighting',
                            'diffviewer_syntax_highlighting_threshold',
+                           'diffviewer_spell_checking',
+                           'diffviewer_spell_checking_language',
                            'diffviewer_show_trailing_whitespace',
                            'include_space_patterns'),
             },

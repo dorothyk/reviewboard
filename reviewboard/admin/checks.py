@@ -160,6 +160,34 @@ def get_can_enable_syntax_highlighting():
         ) % {'url': "http://www.pygments.org/"})
 
 
+def get_can_enable_spell_checking():
+    """Checks whether spell checking can be enabled."""
+    try:
+        import enchant
+
+        version = enchant.__version__.split(".")
+
+        if int(version[0]) > 1:
+            return (True, None)
+        elif int(version[0]) == 1 and int(version[1]) > 6:
+            return (True, None)
+        elif int(version[0]) == 1 and int(version[1]) == 6 \
+            and int(version[2]) >=5:
+            return (True, None)
+        else:
+            return (False, _(
+                'Pyenchant %(cur_version)s is installed, but '
+                '%(required_version)s or higher is required '
+                'to use spell checking.'
+            ) % {'cur_version': enchant.__version__,
+                 'required_version': "1.6.5"})
+    except ImportError:
+        return (False, _(
+            'Spell checking requires the <a href="%(url)s">Pyenchant</a> '
+            'library, which is not installed.'
+        ) % {'url': "http://www.rfk.id.au/software/pyenchant/"})
+
+
 def get_can_enable_ldap():
     """Checks whether LDAP authentication can be enabled."""
     try:
