@@ -7,9 +7,9 @@ from difflib import SequenceMatcher
 
 try:
     import pygments
+    from pygments.formatters import HtmlFormatter
     from pygments.lexers import get_lexer_for_filename
     # from pygments.lexers import guess_lexer_for_filename
-    from pygments.formatters import HtmlFormatter
 except ImportError:
     pass
 
@@ -24,6 +24,7 @@ from djblets.util.misc import cache_memoize
 
 from reviewboard.accounts.models import Profile
 from reviewboard.admin.checks import get_can_enable_syntax_highlighting
+from reviewboard.diffviewer import filters
 from reviewboard.diffviewer.myersdiff import MyersDiffer
 from reviewboard.diffviewer.smdiff import SMDiffer
 from reviewboard.scmtools.core import PRE_CREATION, HEAD
@@ -500,6 +501,7 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
         #else:
         #    lexer = guess_lexer_for_filename(filename, data, stripnl=False)
 
+        lexer.add_filter('spellerror')
         try:
             # This is only available in 0.7 and higher
             lexer.add_filter('codetagify')
