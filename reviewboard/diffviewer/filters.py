@@ -1,5 +1,6 @@
 import re
 
+from enchant import DictWithPWL
 from enchant.checker import SpellChecker
 from enchant.tokenize import EmailFilter, URLFilter
 from pygments import token
@@ -7,10 +8,28 @@ from pygments.filter import Filter
 from pygments.filters import FILTERS
 
 
-SpellingError = token.Token.SpellingError
-token.STANDARD_TYPES[SpellingError] = 'spellerr'
+SSpellingError = token.Token.SSpellingError
+CSpellingError = token.Token.CSpellingError
+token.STANDARD_TYPES[SSpellingError] = 's_spellerr'
+token.STANDARD_TYPES[CSpellingError] = 'c_spellerr'
 
-spell_checker = SpellChecker("en_US", filters=[EmailFilter,URLFilter])
+siteconfig = SiteConfiguration.objects.get_current()
+language = siteconfig.get('diffviewer_spell_checking_language')
+
+
+class SpellCheckerWithPWL(SpellChecker):
+    """Implement a spell checker with personal word list"""
+    def __init__(self, lang=None, pwl=None, text=None,
+                 tokenize=None, chunker=None, filters=None):
+        """Constructor for the SpellChckerWithPWl class"""
+        SpellChecker.__init__(self, lang, text, tokenize, chunker, filters)
+        if pwl is not None:
+            self.dict = DictWithPWL(lang, pwl)
+
+spell_checker = SpellCheckerWithPWL(language,
+                                    pwl='./diffviewer/LocalDictionary.txt',
+                                    filters=[EmailFilter,URLFilter])
+
 
 class SpellError(Filter):
     """A Filter for Pygments that check spell errors."""
@@ -27,7 +46,10 @@ class SpellError(Filter):
 
         for word in string:
             if word in spell_errors:
-                wtype = SpellingError
+                if ttype == token.String:
+                    wtype = SSpellingError
+                else:
+                    wtype = CSpellingError
             else:
                 wtype = ttype
 

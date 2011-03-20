@@ -34,6 +34,7 @@ from djblets.webapi.resources import WebAPIResource as DjbletsWebAPIResource, \
 from reviewboard import get_version_string, get_package_version, is_release
 from reviewboard.accounts.models import Profile
 from reviewboard.diffviewer.diffutils import get_diff_files
+from reviewboard.diffviewer.filters import spell_checker
 from reviewboard.diffviewer.forms import EmptyDiffError
 from reviewboard.reviews.errors import PermissionError
 from reviewboard.reviews.forms import UploadDiffForm, UploadScreenshotForm
@@ -4908,6 +4909,59 @@ class SessionResource(WebAPIResource):
 session_resource = SessionResource()
 
 
+class DictionaryResource(WebAPIResource):
+    name = 'dictionary'
+    singleton = True
+
+    allowed_methods = ('GET', 'POST')
+
+    def get(self, request, *args, **kwargs):
+        word = request.GET.get('check', None)
+        correct = True
+        suggest = None
+
+        if word:
+            correct = spell_checker.check(word)
+            if not correct:
+                suggest = spell_checker.suggest(word)
+
+        data = {
+            'word': word,
+            'correct': correct,
+            'suggest': suggest,
+        }
+
+        return 200, {
+            self.name: data,
+        }
+
+    @webapi_login_required
+    @webapi_response_errors(NOT_LOGGED_IN, PERMISSION_DENIED)
+    @webapi_request_fields(
+        required = {
+            'add_word': {
+                'type': str,
+                'description': 'add this word to dictionary',
+            },
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        word = kwargs.get('add_word', None)
+
+        spell_checker.add(word)
+
+        if spell_checker.check(word):
+            status_code = 200
+        else:
+            status_code = 304
+
+        return status_code, {
+            self.name: word,
+        }
+
+dictionary_resource = DictionaryResource()
+
+
 class RootResource(DjbletsRootResource):
     """Links to all the main resources, including URI templates to resources
     anywhere in the tree.
@@ -4925,6 +4979,7 @@ class RootResource(DjbletsRootResource):
             server_info_resource,
             session_resource,
             user_resource,
+            dictionary_resource,
         ], *args, **kwargs)
 
     @webapi_check_local_site

@@ -37,6 +37,8 @@
 <script type="text/javascript" src="{{MEDIA_URL}}rb/js/diffviewer.js?{{MEDIA_SERIAL}}"></script>
 <script type="text/javascript" src="{{MEDIA_URL}}rb/js/reviews.js?{{MEDIA_SERIAL}}"></script>
 <script type="text/javascript" src="{{MEDIA_URL}}rb/js/jquery.form.js?{{MEDIA_SERIAL}}"></script>
+<script type="text/javascript" src="{{MEDIA_URL}}rb/js/jquery.contextmenu.r2.js"></script>
+<script type="text/javascript" src="{{MEDIA_URL}}rb/js/spellcheck.js"></script>
 
 {% if not specific_diff_requested %}
 <script type="text/javascript">
@@ -49,6 +51,12 @@
 {% endblock %}
 
 {% block content %}
+<div class="contextMenu" id="spellcheckMenu">
+      <ul>
+        <li id="ignore">Ignore Once</li>
+        <li id="add">Add to Dictionary</li>
+      </ul>
+</div>
 {% if error %}
 {%  errorbox %}
 <p>{{error}}</p>
