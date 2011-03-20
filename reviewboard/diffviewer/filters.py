@@ -1,5 +1,6 @@
 import re
 
+from djblets.siteconfig.models import SiteConfiguration
 from enchant import DictWithPWL
 from enchant.checker import SpellChecker
 from enchant.tokenize import EmailFilter, URLFilter
