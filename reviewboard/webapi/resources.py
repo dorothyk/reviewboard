@@ -4910,6 +4910,7 @@ session_resource = SessionResource()
 
 
 class DictionaryResource(WebAPIResource):
+    """Provide information and functions about spell checking on words."""
     name = 'dictionary'
     singleton = True
 
@@ -4926,6 +4927,11 @@ class DictionaryResource(WebAPIResource):
         },
     )
     def get(self, request, word, *args, **kwargs):
+        """Get information of a certain word.
+
+        This include the correctness and the suggestions for spelling error.
+        If the word spells correctly, suggestion is null.
+       """
         correct = True
         suggest = None
 
@@ -4956,6 +4962,11 @@ class DictionaryResource(WebAPIResource):
         },
     )
     def create(self, request, word, *args, **kwargs):
+        """Add a certain word into user's personal dictionary.
+
+        After adding operation, check the word to see whether it is
+        in the dictionary. If not, return as unmodified.
+        """
         spell_checker.add(word)
 
         if spell_checker.check(word):
