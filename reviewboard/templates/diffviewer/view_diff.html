@@ -52,10 +52,10 @@
 
 {% block content %}
 <div class="contextMenu" id="spellcheckMenu">
-      <ul>
-        <li id="ignore">Ignore Once</li>
-        <li id="add">Add to Dictionary</li>
-      </ul>
+ <ul>
+  <li id="spellcheck_ignore">{% trans "Ignore Once" %}</li>
+  <li id="spellcheck_add">{% trans "Add to Dictionary" %}</li>
+ </ul>
 </div>
 {% if error %}
 {%  errorbox %}

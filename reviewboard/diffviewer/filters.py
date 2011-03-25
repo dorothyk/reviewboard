@@ -20,14 +20,12 @@ language = siteconfig.get('diffviewer_spell_checking_language')
 
 class SpellCheckerWithPWL(SpellChecker):
     """Implement a spell checker with personal word list"""
-    def __init__(self, lang=None, pwl=None, text=None,
-                 tokenize=None, chunker=None, filters=None):
-        """Constructor for the SpellChckerWithPWl class"""
-        SpellChecker.__init__(self, lang, text, tokenize, chunker, filters)
+    def __init__(self, pwl=None, *args, **kwargs):
+        SpellChecker.__init__(self, *args, **kwargs)
         if pwl is not None:
-            self.dict = DictWithPWL(lang, pwl)
+            self.dict = DictWithPWL(self.lang, pwl)
 
-spell_checker = SpellCheckerWithPWL(language,
+spell_checker = SpellCheckerWithPWL(lang = language,
                                     pwl='./diffviewer/LocalDictionary.txt',
                                     filters=[EmailFilter,URLFilter])
 
@@ -49,7 +47,7 @@ class SpellError(Filter):
             if word in spell_errors:
                 if ttype == token.String:
                     wtype = SSpellingError
-                else:
+                elif ttype == token.Comment:
                     wtype = CSpellingError
             else:
                 wtype = ttype

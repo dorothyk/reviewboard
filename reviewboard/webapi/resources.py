@@ -4915,8 +4915,17 @@ class DictionaryResource(WebAPIResource):
 
     allowed_methods = ('GET', 'POST')
 
-    def get(self, request, *args, **kwargs):
-        word = request.GET.get('check', None)
+    @webapi_check_local_site
+    @webapi_check_login_required
+    @webapi_request_fields(
+        required = {
+            'word': {
+                'type':str,
+                'description': 'check the word for spell error',
+            },
+        },
+    )
+    def get(self, request, word, *args, **kwargs):
         correct = True
         suggest = None
 
@@ -4935,19 +4944,18 @@ class DictionaryResource(WebAPIResource):
             self.name: data,
         }
 
+    @webapi_check_local_site
     @webapi_login_required
     @webapi_response_errors(NOT_LOGGED_IN, PERMISSION_DENIED)
     @webapi_request_fields(
         required = {
-            'add_word': {
+            'word': {
                 'type': str,
                 'description': 'add this word to dictionary',
             },
         },
     )
-    def create(self, request, *args, **kwargs):
-        word = kwargs.get('add_word', None)
-
+    def create(self, request, word, *args, **kwargs):
         spell_checker.add(word)
 
         if spell_checker.check(word):
@@ -4973,13 +4981,13 @@ class RootResource(DjbletsRootResource):
     """
     def __init__(self, *args, **kwargs):
         super(RootResource, self).__init__([
+            dictionary_resource,
             repository_resource,
             review_group_resource,
             review_request_resource,
             server_info_resource,
             session_resource,
             user_resource,
-            dictionary_resource,
         ], *args, **kwargs)
 
     @webapi_check_local_site
