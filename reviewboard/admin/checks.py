@@ -37,6 +37,7 @@ from django.utils.translation import gettext as _
 from djblets.util.filesystem import is_exe_in_path
 from pkg_resources import parse_version
 
+
 _updates_required = []
 _install_fine = False
 
