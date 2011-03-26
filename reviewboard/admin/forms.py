@@ -345,7 +345,6 @@ class EMailSettingsForm(SiteSettingsForm):
 
 class DiffSettingsForm(SiteSettingsForm):
     """Diff settings for Review Board."""
-
     if has_spell_checking:
         LANGUAGE_CHOICES = ((lang, lang) for lang in list_languages())
     else:

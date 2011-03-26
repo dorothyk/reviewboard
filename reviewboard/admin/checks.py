@@ -163,6 +163,7 @@ def get_can_enable_syntax_highlighting():
 def get_can_enable_spell_checking():
     """Checks whether spell checking can be enabled."""
     required_version = "1.6.5"
+
     try:
         import enchant
 
