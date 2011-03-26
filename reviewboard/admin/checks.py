@@ -35,7 +35,7 @@ import sys
 from django.conf import settings
 from django.utils.translation import gettext as _
 from djblets.util.filesystem import is_exe_in_path
-
+from pkg_resources import parse_version
 
 _updates_required = []
 _install_fine = False
@@ -162,28 +162,24 @@ def get_can_enable_syntax_highlighting():
 
 def get_can_enable_spell_checking():
     """Checks whether spell checking can be enabled."""
+    required_version = "1.6.5"
     try:
         import enchant
 
         version = enchant.__version__.split(".")
 
-        if int(version[0]) > 1:
-            return (True, None)
-        elif int(version[0]) == 1 and int(version[1]) > 6:
-            return (True, None)
-        elif int(version[0]) == 1 and int(version[1]) == 6 \
-            and int(version[2]) >=5:
+        if parse_version(enchant.__version__) >= parse_version(required_version):
             return (True, None)
         else:
             return (False, _(
-                'Pyenchant %(cur_version)s is installed, but '
+                'PyEnchant %(cur_version)s is installed, but '
                 '%(required_version)s or higher is required '
                 'to use spell checking.'
             ) % {'cur_version': enchant.__version__,
-                 'required_version': "1.6.5"})
+                 'required_version': required_version})
     except ImportError:
         return (False, _(
-            'Spell checking requires the <a href="%(url)s">Pyenchant</a> '
+            'Spell checking requires the <a href="%(url)s">PyEnchant</a> '
             'library, which is not installed.'
         ) % {'url': "http://www.rfk.id.au/software/pyenchant/"})
 

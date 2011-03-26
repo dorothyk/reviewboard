@@ -40,8 +40,9 @@ import pytz
 
 try:
     from enchant import list_languages
+    has_spell_checking = True
 except ImportError:
-    pass
+    has_spell_checking = False
 
 from reviewboard.accounts.forms import LegacyAuthModuleSettingsForm
 from reviewboard.admin.checks import get_can_enable_search, \
@@ -345,10 +346,10 @@ class EMailSettingsForm(SiteSettingsForm):
 class DiffSettingsForm(SiteSettingsForm):
     """Diff settings for Review Board."""
 
-    try:
-        LANGUAGE_CHOICES = ( (lang, lang) for lang in list_languages())
-    except AttributeError:
-        pass
+    if has_spell_checking:
+        LANGUAGE_CHOICES = ((lang, lang) for lang in list_languages())
+    else:
+        LANGUAGE_CHOICES = ()
 
     diffviewer_syntax_highlighting = forms.BooleanField(
         label=_("Show syntax highlighting"),
