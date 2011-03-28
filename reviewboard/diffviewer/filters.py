@@ -15,7 +15,8 @@ token.STANDARD_TYPES[SSpellingError] = 's_spellerr'
 token.STANDARD_TYPES[CSpellingError] = 'c_spellerr'
 
 siteconfig = SiteConfiguration.objects.get_current()
-language = siteconfig.get('diffviewer_spell_checking_language')
+new_lang = siteconfig.get('diffviewer_spell_checking_language')
+person_wordlist = siteconfig.get('diffviewer_spell_checking_dir')
 
 
 class SpellCheckerWithPWL(SpellChecker):
@@ -25,9 +26,10 @@ class SpellCheckerWithPWL(SpellChecker):
         if pwl is not None:
             self.dict = DictWithPWL(self.lang, pwl)
 
-spell_checker = SpellCheckerWithPWL(lang = language,
-                                    pwl='./diffviewer/LocalDictionary.txt',
-                                    filters=[EmailFilter,URLFilter])
+if language != new_lang:
+    language = new_lang
+    spell_checker = SpellCheckerWithPWL(lang = language, pwl=person_wordlist,
+                                        filters=[EmailFilter,URLFilter])
 
 
 class SpellError(Filter):
