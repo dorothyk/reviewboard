@@ -14,6 +14,9 @@ CSpellingError = token.Token.CSpellingError
 token.STANDARD_TYPES[SSpellingError] = 's_spellerr'
 token.STANDARD_TYPES[CSpellingError] = 'c_spellerr'
 
+language = None
+spell_checker = None
+
 siteconfig = SiteConfiguration.objects.get_current()
 new_lang = siteconfig.get('diffviewer_spell_checking_language')
 person_wordlist = siteconfig.get('diffviewer_spell_checking_dir')

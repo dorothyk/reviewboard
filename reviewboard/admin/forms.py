@@ -38,8 +38,15 @@ from djblets.log import restart_logging
 from djblets.siteconfig.forms import SiteSettingsForm
 import pytz
 
+try:
+    from enchant import list_languages
+    has_spell_checking = True
+except ImportError:
+    has_spell_checking = False
+
 from reviewboard.accounts.forms import LegacyAuthModuleSettingsForm
 from reviewboard.admin.checks import get_can_enable_search, \
+                                     get_can_enable_spell_checking, \
                                      get_can_enable_syntax_highlighting, \
                                      get_can_use_amazon_s3, \
                                      get_can_use_couchdb
@@ -342,6 +349,11 @@ class EMailSettingsForm(SiteSettingsForm):
 
 class DiffSettingsForm(SiteSettingsForm):
     """Diff settings for Review Board."""
+    if has_spell_checking:
+        LANGUAGE_CHOICES = ((lang, lang) for lang in list_languages())
+    else:
+        LANGUAGE_CHOICES = ()
+
     diffviewer_syntax_highlighting = forms.BooleanField(
         label=_("Show syntax highlighting"),
         required=False)
@@ -421,6 +433,7 @@ class DiffSettingsForm(SiteSettingsForm):
         # TODO: Move this check into a dependencies module so we can catch it
         #       when the user starts up Review Board.
         can_syntax_highlight, reason = get_can_enable_syntax_highlighting()
+        can_spell_check, reason = get_can_enable_spell_checking()
 
         if not can_syntax_highlight:
             self.disabled_fields['diffviewer_syntax_highlighting'] = True
