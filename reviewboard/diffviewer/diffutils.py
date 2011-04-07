@@ -22,10 +22,12 @@ from djblets.log import log_timed
 from djblets.siteconfig.models import SiteConfiguration
 from djblets.util.misc import cache_memoize
 
+from enchant import DictWithPWL
+from enchant.tokenize import get_tokenizer, HTMLChunker
+
 from reviewboard.accounts.models import Profile
 from reviewboard.admin.checks import get_can_enable_spell_checking, \
                                      get_can_enable_syntax_highlighting
-from reviewboard.diffviewer import filters
 from reviewboard.diffviewer.myersdiff import MyersDiffer
 from reviewboard.diffviewer.smdiff import SMDiffer
 from reviewboard.scmtools.core import PRE_CREATION, HEAD
@@ -493,7 +495,7 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
         else:
             last_header_index[0] = last_index
 
-    def apply_pygments(data, filename, enable_spell_checking):
+    def apply_pygments(data, filename):
         # XXX Guessing is preferable but really slow, especially on XML
         #     files.
         #if filename.endswith(".xml"):
@@ -501,9 +503,6 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
                                        encoding='utf-8')
         #else:
         #    lexer = guess_lexer_for_filename(filename, data, stripnl=False)
-
-        if enable_spell_checking:
-            lexer.add_filter('spellerror')
 
         try:
             # This is only available in 0.7 and higher
@@ -513,6 +512,36 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
 
         return pygments.highlight(data, lexer, NoWrapperHtmlFormatter()).splitlines()
 
+    def spell_check_lines(lines, dict, tokenizer):
+        """Check for spell errors with marked lines.
+
+        add new class ``spellerr'' to spell errors
+        in strings and comments.
+        """
+        for line in lines:
+            mark = re.search('<span class="[sc]">[^<]*</span>', line[5])
+
+            if mark:
+                offset = 0
+                check = line[5][mark.start():mark.end()]
+
+                for word, pos in tokenizer(line[5][mark.start():mark.end()]):
+                    if not dict.check(word):
+                        check = check[:offset+pos] + \
+                                u'<span class="spellerr">' + \
+                                check[offset+pos:]
+
+                        offset += 23
+
+                        check = check[:offset+pos+len(word)] + \
+                                u'</span>' + check[offset+pos+len(word):]
+
+                        offset+=7
+
+                new = line[5][:mark.start()] + check + line[5][mark.end():]
+                line[5] = mark_safe(new)
+
+        return lines
 
     # There are three ways this function is called:
     #
@@ -601,8 +630,8 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
         try:
             # TODO: Try to figure out the right lexer for these files
             #       once instead of twice.
-            markup_a = apply_pygments(old or '', source_file, enable_spell_checking)
-            markup_b = apply_pygments(new or '', dest_file, enable_spell_checking)
+            markup_a = apply_pygments(old or '', source_file)
+            markup_b = apply_pygments(new or '', dest_file)
         except ValueError:
             pass
 
@@ -641,6 +670,11 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
             "Generating diff chunks for filediff id %s (%s)" %
             (filediff.id, filediff.source_file))
 
+    spell_check_lang = siteconfig.get('diffviewer_spell_checking_language')
+    spell_check_dict_dir = siteconfig.get('diffviewer_spell_checking_dir')
+    spell_check_dict = DictWithPWL(spell_check_lang, spell_check_dict_dir)
+    spell_check_tokenizer = get_tokenizer(spell_check_lang, (HTMLChunker,))
+
     for tag, i1, i2, j1, j2, meta in opcodes_with_metadata(differ):
         oldlines = markup_a[i1:i2]
         newlines = markup_b[j1:j2]
@@ -667,6 +701,10 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
                                     last_range_start, True)
                     yield new_chunk(lines, last_range_start, numlines)
         else:
+            if enable_spell_checking and tag in ['insert','replace','delete']:
+                lines = spell_check_lines(lines, spell_check_dict,
+                                          spell_check_tokenizer)
+
             yield new_chunk(lines, 0, numlines, False, tag, meta)
 
         linenum += numlines

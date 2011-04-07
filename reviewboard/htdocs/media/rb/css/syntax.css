@@ -57,6 +57,4 @@
 .vi { color: #B8860B } /* Name.Variable.Instance */
 .il { color: #666666 } /* Literal.Number.Integer.Long */
 .cs { color: red; font-weight: bold; font-style: italic; }
-.s_spellerr { color: red; text-decoration: underline; } /* SpellingError in String*/
-.c_spellerr { color: red; text-decoration: underline; } /* SpellingError in Comment*/
-
+.spellerr { color: red; text-decoration: underline; } /* SpellingError */

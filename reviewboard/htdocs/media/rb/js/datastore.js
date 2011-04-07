@@ -1525,7 +1525,7 @@ $.extend(RB.SpellCheck.prototype, {
     },
 
     _changeStyle: function(word) {
-        word.className = (word.className == 's_spellerr' ? 's' : 'c');
+        word.className = undefined ;
     },
 });
 
