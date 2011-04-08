@@ -7,9 +7,9 @@ from difflib import SequenceMatcher
 
 try:
     import pygments
+    from pygments.formatters import HtmlFormatter
     from pygments.lexers import get_lexer_for_filename
     # from pygments.lexers import guess_lexer_for_filename
-    from pygments.formatters import HtmlFormatter
 except ImportError:
     pass
 
@@ -22,8 +22,12 @@ from djblets.log import log_timed
 from djblets.siteconfig.models import SiteConfiguration
 from djblets.util.misc import cache_memoize
 
+from enchant import DictWithPWL
+from enchant.tokenize import get_tokenizer, HTMLChunker
+
 from reviewboard.accounts.models import Profile
-from reviewboard.admin.checks import get_can_enable_syntax_highlighting
+from reviewboard.admin.checks import get_can_enable_spell_checking, \
+                                     get_can_enable_syntax_highlighting
 from reviewboard.diffviewer.myersdiff import MyersDiffer
 from reviewboard.diffviewer.smdiff import SMDiffer
 from reviewboard.scmtools.core import PRE_CREATION, HEAD
@@ -398,7 +402,7 @@ def register_interesting_lines_for_filename(differ, filename):
 
 
 def get_chunks(diffset, filediff, interfilediff, force_interdiff,
-               enable_syntax_highlighting):
+               enable_syntax_highlighting, enable_spell_checking):
     def diff_line(vlinenum, oldlinenum, newlinenum, oldline, newline,
                   oldmarkup, newmarkup):
         # This function accesses the variable meta, defined in an outer context.
@@ -511,6 +515,36 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
 
         return pygments.highlight(data, lexer, NoWrapperHtmlFormatter()).splitlines()
 
+    def spell_check_lines(lines, dict, tokenizer):
+        """Check for spell errors with marked lines.
+
+        add new class ``spellerr'' to spell errors
+        in strings and comments.
+        """
+        for line in lines:
+            mark = re.search('<span class="[sc]">[^<]*</span>', line[5])
+
+            if mark:
+                offset = 0
+                check = line[5][mark.start():mark.end()]
+
+                for word, pos in tokenizer(line[5][mark.start():mark.end()]):
+                    if not dict.check(word):
+                        check = check[:offset+pos] + \
+                                u'<span class="spellerr">' + \
+                                check[offset+pos:]
+
+                        offset += 23
+
+                        check = check[:offset+pos+len(word)] + \
+                                u'</span>' + check[offset+pos+len(word):]
+
+                        offset+=7
+
+                new = line[5][:mark.start()] + check + line[5][mark.end():]
+                line[5] = mark_safe(new)
+
+        return lines
 
     # There are three ways this function is called:
     #
@@ -639,6 +673,11 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
             "Generating diff chunks for filediff id %s (%s)" %
             (filediff.id, filediff.source_file))
 
+    spell_check_lang = siteconfig.get('diffviewer_spell_checking_language')
+    spell_check_dict_dir = siteconfig.get('diffviewer_spell_checking_dir')
+    spell_check_dict = DictWithPWL(spell_check_lang, spell_check_dict_dir)
+    spell_check_tokenizer = get_tokenizer(spell_check_lang, (HTMLChunker,))
+
     for tag, i1, i2, j1, j2, meta in opcodes_with_metadata(differ):
         oldlines = markup_a[i1:i2]
         newlines = markup_b[j1:j2]
@@ -665,6 +704,10 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
                                     last_range_start, True)
                     yield new_chunk(lines, last_range_start, numlines)
         else:
+            if enable_spell_checking and tag in ['insert','replace','delete']:
+                lines = spell_check_lines(lines, spell_check_dict,
+                                          spell_check_tokenizer)
+
             yield new_chunk(lines, 0, numlines, False, tag, meta)
 
         linenum += numlines
@@ -917,6 +960,7 @@ def get_revision_str(revision):
 
 def get_diff_files(diffset, filediff=None, interdiffset=None,
                    enable_syntax_highlighting=True,
+                   enable_spell_checking=True,
                    load_chunks=True):
     if filediff:
         filediffs = [filediff]
@@ -1067,7 +1111,8 @@ def get_diff_files(diffset, filediff=None, interdiffset=None,
                     lambda: list(get_chunks(filediff.diffset,
                                             filediff, interfilediff,
                                             force_interdiff,
-                                            enable_syntax_highlighting)),
+                                            enable_syntax_highlighting,
+                                            enable_spell_checking)),
                     large_data=True)
 
             file['chunks'] = chunks
@@ -1165,7 +1210,8 @@ def get_file_chunks_in_range(context, filediff, interfilediff,
     else:
         assert 'user' in context
         files = get_diff_files(filediff.diffset, filediff, interdiffset,
-                               get_enable_highlighting(context['user']))
+                               get_enable_highlighting(context['user']),
+                               get_enable_checking(context['user']))
         context[key] = files
 
     if not files:
@@ -1233,3 +1279,16 @@ def get_enable_highlighting(user):
     return (siteconfig.get('diffviewer_syntax_highlighting') and
             user_syntax_highlighting and
             get_can_enable_syntax_highlighting())
+
+
+def get_enable_checking(user):
+    if user.is_authenticated():
+        profile, profile_is_new = Profile.objects.get_or_create(user=user)
+        user_spell_checking = profile.spell_checking
+    else:
+        user_spell_checking = True
+
+    siteconfig = SiteConfiguration.objects.get_current()
+    return (siteconfig.get('diffviewer_spell_checking') and
+            user_spell_checking and
+            get_can_enable_spell_checking())
