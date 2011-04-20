@@ -5086,19 +5086,19 @@ class DictionaryResource(WebAPIResource):
     @webapi_request_fields(
         required = {
             'word': {
-                'type':str,
-                'description': 'check the word for spell error',
+                'type': str,
+                'description': 'The word to check in the spelling dictionary.',
             },
         },
     )
     def get(self, request, word, *args, **kwargs):
-        """Get information of a certain word.
+        """Returns information on a word.
 
-        This include the correctness and the suggestions for spelling error.
-        If the word spells correctly, suggestion is null.
-       """
+        This includes whether or not the word is correctly spelled,
+        and any spelling suggestions.
+        """
         correct = True
-        suggest = None
+        suggest = []
 
         if word:
             correct = spell_checker.check(word)
@@ -5122,15 +5122,14 @@ class DictionaryResource(WebAPIResource):
         required = {
             'word': {
                 'type': str,
-                'description': 'add this word to dictionary',
+                'description': 'The word to add to the dictionary.',
             },
         },
     )
     def create(self, request, word, *args, **kwargs):
-        """Add a certain word into user's personal dictionary.
+        """Adds a word to the dictionary.
 
-        After adding operation, check the word to see whether it is
-        in the dictionary. If not, return as unmodified.
+        If the word is already added, this will return :http:`304`.
         """
         spell_checker.add(word)
 

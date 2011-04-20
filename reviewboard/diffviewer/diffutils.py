@@ -21,7 +21,6 @@ from django.utils.translation import ugettext as _
 from djblets.log import log_timed
 from djblets.siteconfig.models import SiteConfiguration
 from djblets.util.misc import cache_memoize
-
 from enchant import DictWithPWL
 from enchant.tokenize import get_tokenizer, HTMLChunker
 
@@ -44,6 +43,7 @@ NEWLINE_CONVERSION_RE = re.compile(r'\r(\r?\n)?')
 ALPHANUM_RE = re.compile(r'\w')
 WHITESPACE_RE = re.compile(r'\s')
 
+SPELL_CHECKED_SPANS_RE = re.compile('<span class="[sc]">[^<]*</span>')
 
 # A list of regular expressions for headers in the source code that we can
 # display in collapsed regions of diffs and diff fragments in reviews.
@@ -515,21 +515,22 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
 
         return pygments.highlight(data, lexer, NoWrapperHtmlFormatter()).splitlines()
 
-    def spell_check_lines(lines, dict, tokenizer):
+    def spell_check_lines(lines, spell_dict, tokenizer):
         """Check for spell errors with marked lines.
 
-        add new class ``spellerr'' to spell errors
-        in strings and comments.
+        For spell errrors in strings and comments, this can change
+        their classname to ``spellerr''
         """
         for line in lines:
-            mark = re.search('<span class="[sc]">[^<]*</span>', line[5])
-
-            if mark:
+            begin = 0
+            last = 0
+            new_mark = ""
+            for m in SPELL_CHECKED_SPANS_RE.finditer(line[5]):
                 offset = 0
-                check = line[5][mark.start():mark.end()]
-
-                for word, pos in tokenizer(line[5][mark.start():mark.end()]):
-                    if not dict.check(word):
+                check = m.group()
+                begin = m.start()
+                for word, pos in tokenizer(check):
+                    if not spell_dict.check(word):
                         check = check[:offset+pos] + \
                                 u'<span class="spellerr">' + \
                                 check[offset+pos:]
@@ -541,8 +542,11 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
 
                         offset+=7
 
-                new = line[5][:mark.start()] + check + line[5][mark.end():]
-                line[5] = mark_safe(new)
+                new_mark += line[5][last:begin] + check
+                last = m.end()
+
+            if new_mark:
+                line[5] = mark_safe(new_mark)
 
         return lines
 
@@ -673,10 +677,11 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
             "Generating diff chunks for filediff id %s (%s)" %
             (filediff.id, filediff.source_file))
 
-    spell_check_lang = siteconfig.get('diffviewer_spell_checking_language')
-    spell_check_dict_dir = siteconfig.get('diffviewer_spell_checking_dir')
-    spell_check_dict = DictWithPWL(spell_check_lang, spell_check_dict_dir)
-    spell_check_tokenizer = get_tokenizer(spell_check_lang, (HTMLChunker,))
+    if enable_spell_checking:
+        spell_check_lang = siteconfig.get('diffviewer_spell_checking_language')
+        spell_check_dict_dir = siteconfig.get('diffviewer_spell_checking_dir')
+        spell_check_dict = DictWithPWL(spell_check_lang, spell_check_dict_dir)
+        spell_check_tokenizer = get_tokenizer(spell_check_lang, (HTMLChunker,))
 
     for tag, i1, i2, j1, j2, meta in opcodes_with_metadata(differ):
         oldlines = markup_a[i1:i2]
@@ -704,7 +709,7 @@ def get_chunks(diffset, filediff, interfilediff, force_interdiff,
                                     last_range_start, True)
                     yield new_chunk(lines, last_range_start, numlines)
         else:
-            if enable_spell_checking and tag in ['insert','replace','delete']:
+            if enable_spell_checking and tag in ['insert', 'replace', 'delete']:
                 lines = spell_check_lines(lines, spell_check_dict,
                                           spell_check_tokenizer)
 
